@@ -27,37 +27,51 @@ jobs:
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
 
-      - name: Install lftp and sshpass
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp sshpass
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
-      - name: Explore server via multiple methods
+      - name: Test SFTP - upload single file to _sub/game/
         continue-on-error: true
         env:
           FTP_PASS: ${{ secrets.FTP_PASSWORD }}
         run: |
-          echo "=== Method 1: lftp with -u flag ==="
+          # Create a test file
+          echo "TupTuDu deploy test $(date)" > /tmp/deploy-test.txt
+
+          echo "=== Test 1: curl sftp upload ==="
+          curl -v --insecure -T /tmp/deploy-test.txt \
+            -u "libor.tuptudu.cz:$FTP_PASS" \
+            "sftp://ftp.tuptudu.cz:222/_sub/game/deploy-test.txt" 2>&1 || echo "curl sftp failed"
+
+          echo ""
+          echo "=== Test 2: curl sftp list ==="
+          curl -v --insecure --list-only \
+            -u "libor.tuptudu.cz:$FTP_PASS" \
+            "sftp://ftp.tuptudu.cz:222/" 2>&1 || echo "curl sftp list failed"
+
+          echo ""
+          echo "=== Test 3: curl FTP (port 21) ==="
+          timeout 10 curl -v --list-only \
+            -u "libor.tuptudu.cz:$FTP_PASS" \
+            "ftp://ftp.tuptudu.cz:21/" 2>&1 || echo "FTP port 21 failed/blocked (expected)"
+
+          echo ""
+          echo "=== Test 4: lftp FTP protocol on port 222 ==="
+          timeout 10 lftp -e "
+            open -u libor.tuptudu.cz,$FTP_PASS ftp://ftp.tuptudu.cz:222;
+            ls;
+            quit
+          " 2>&1 || echo "lftp FTP on 222 failed"
+
+          echo ""
+          echo "=== Test 5: lftp SFTP - put single file ==="
           lftp -e "
             set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -p 222';
             open -u libor.tuptudu.cz,$FTP_PASS sftp://ftp.tuptudu.cz;
-            pwd;
-            cls;
+            cd _sub/game;
+            put /tmp/deploy-test.txt;
             quit
-          " 2>&1 || echo "Method 1 failed"
-
-          echo ""
-          echo "=== Method 2: sftp direct ==="
-          sshpass -p "$FTP_PASS" sftp -o StrictHostKeyChecking=no -P 222 libor.tuptudu.cz@ftp.tuptudu.cz <<'SFTP_COMMANDS'
-          pwd
-          ls
-          ls _sub
-          ls _sub/game
-          quit
-          SFTP_COMMANDS
-          echo "Method 2 exit code: $?" || echo "Method 2 failed"
-
-          echo ""
-          echo "=== Method 3: ssh echo test ==="
-          sshpass -p "$FTP_PASS" ssh -o StrictHostKeyChecking=no -p 222 libor.tuptudu.cz@ftp.tuptudu.cz "ls -la" 2>&1 || echo "Method 3 failed (SSH shell not available - expected)"
+          " 2>&1 || echo "lftp sftp put failed"
