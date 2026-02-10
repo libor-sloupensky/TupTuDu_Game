@@ -33,51 +33,15 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
-      - name: Prepare deploy directories
-        run: |
-          mkdir -p deploy-app deploy-public
-
-          # App files (everything except public/)
-          cp -r app bootstrap config database routes storage vendor composer.json composer.lock artisan deploy-app/
-
-          # Public files
-          cp -r public/. deploy-public/
-
-      - name: Create laravel-game directory on server
+      - name: Explore FTP server structure
         continue-on-error: true
         run: |
           lftp -e "
             set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -p 222';
             open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-            ls -la /;
+            pwd;
+            ls;
+            cd _sub && ls && cd ..;
+            cd _sub/game && ls && cd ../..;
             quit
-          " 2>&1 | tee /tmp/ftp-ls.txt
-
-      - name: Deploy app files
-        run: |
-          lftp -e "
-            set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -p 222';
-            set cmd:fail-exit no;
-            open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-            mkdir laravel-game;
-            mkdir laravel-game/storage;
-            mkdir laravel-game/storage/framework;
-            mkdir laravel-game/storage/framework/sessions;
-            mkdir laravel-game/storage/framework/views;
-            mkdir laravel-game/storage/framework/cache;
-            mkdir laravel-game/storage/logs;
-            mkdir laravel-game/bootstrap;
-            mkdir laravel-game/bootstrap/cache;
-            set cmd:fail-exit yes;
-            mirror --reverse --only-newer --parallel=5 --verbose deploy-app/ laravel-game/;
-            quit
-          "
-
-      - name: Deploy public files
-        run: |
-          lftp -e "
-            set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -p 222';
-            open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-            mirror --reverse --only-newer --parallel=5 --verbose deploy-public/ _sub/game/;
-            quit
-          "
+          " 2>&1 || true
