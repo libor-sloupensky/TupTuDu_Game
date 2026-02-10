@@ -33,45 +33,28 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
-      - name: Test SFTP - upload single file to _sub/game/
-        continue-on-error: true
+      - name: Prepare deploy directories
+        run: |
+          mkdir -p deploy-app deploy-public
+
+          # App files (everything except public/)
+          cp -r app bootstrap config database routes storage vendor composer.json composer.lock artisan deploy-app/
+
+          # Public files
+          cp -r public/. deploy-public/
+
+      - name: Deploy via FTP (port 21)
         env:
           FTP_PASS: ${{ secrets.FTP_PASSWORD }}
         run: |
-          # Create a test file
-          echo "TupTuDu deploy test $(date)" > /tmp/deploy-test.txt
-
-          echo "=== Test 1: curl sftp upload ==="
-          curl -v --insecure -T /tmp/deploy-test.txt \
-            -u "libor.tuptudu.cz:$FTP_PASS" \
-            "sftp://ftp.tuptudu.cz:222/_sub/game/deploy-test.txt" 2>&1 || echo "curl sftp failed"
-
-          echo ""
-          echo "=== Test 2: curl sftp list ==="
-          curl -v --insecure --list-only \
-            -u "libor.tuptudu.cz:$FTP_PASS" \
-            "sftp://ftp.tuptudu.cz:222/" 2>&1 || echo "curl sftp list failed"
-
-          echo ""
-          echo "=== Test 3: curl FTP (port 21) ==="
-          timeout 10 curl -v --list-only \
-            -u "libor.tuptudu.cz:$FTP_PASS" \
-            "ftp://ftp.tuptudu.cz:21/" 2>&1 || echo "FTP port 21 failed/blocked (expected)"
-
-          echo ""
-          echo "=== Test 4: lftp FTP protocol on port 222 ==="
-          timeout 10 lftp -e "
-            open -u libor.tuptudu.cz,$FTP_PASS ftp://ftp.tuptudu.cz:222;
-            ls;
-            quit
-          " 2>&1 || echo "lftp FTP on 222 failed"
-
-          echo ""
-          echo "=== Test 5: lftp SFTP - put single file ==="
           lftp -e "
-            set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -p 222';
-            open -u libor.tuptudu.cz,$FTP_PASS sftp://ftp.tuptudu.cz;
-            cd _sub/game;
-            put /tmp/deploy-test.txt;
+            set ftp:ssl-allow no;
+            set cmd:fail-exit no;
+            open -u libor.tuptudu.cz,$FTP_PASS ftp://ftp.tuptudu.cz;
+            ls;
+            mkdir laravel-game;
+            set cmd:fail-exit yes;
+            mirror --reverse --only-newer --parallel=5 --verbose deploy-app/ laravel-game/;
+            mirror --reverse --only-newer --parallel=5 --verbose deploy-public/ _sub/game/;
             quit
-          " 2>&1 || echo "lftp sftp put failed"
+          "
