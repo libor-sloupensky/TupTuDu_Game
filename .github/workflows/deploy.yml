@@ -27,21 +27,37 @@ jobs:
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
 
-      - name: Install lftp
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+      - name: Install lftp and sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp sshpass
 
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
-      - name: Explore FTP server structure
+      - name: Explore server via multiple methods
         continue-on-error: true
+        env:
+          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
         run: |
+          echo "=== Method 1: lftp with -u flag ==="
           lftp -e "
             set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -p 222';
-            open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
+            open -u libor.tuptudu.cz,$FTP_PASS sftp://ftp.tuptudu.cz;
             pwd;
-            ls;
-            cd _sub && ls && cd ..;
-            cd _sub/game && ls && cd ../..;
+            cls;
             quit
-          " 2>&1 || true
+          " 2>&1 || echo "Method 1 failed"
+
+          echo ""
+          echo "=== Method 2: sftp direct ==="
+          sshpass -p "$FTP_PASS" sftp -o StrictHostKeyChecking=no -P 222 libor.tuptudu.cz@ftp.tuptudu.cz <<'SFTP_COMMANDS'
+          pwd
+          ls
+          ls _sub
+          ls _sub/game
+          quit
+          SFTP_COMMANDS
+          echo "Method 2 exit code: $?" || echo "Method 2 failed"
+
+          echo ""
+          echo "=== Method 3: ssh echo test ==="
+          sshpass -p "$FTP_PASS" ssh -o StrictHostKeyChecking=no -p 222 libor.tuptudu.cz@ftp.tuptudu.cz "ls -la" 2>&1 || echo "Method 3 failed (SSH shell not available - expected)"
