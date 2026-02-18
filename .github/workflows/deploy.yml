@@ -115,7 +115,7 @@ jobs:
           set net:max-retries 3;
           set net:reconnect-interval-base 5;
           open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-          mirror --reverse --verbose --no-perms --parallel=5 /tmp/deploy-app/ /tuptudu.cz/laravel-game/;
+          mirror --reverse --verbose --no-perms --parallel=5 /tmp/deploy-app/ /laravel-game/;
           quit
         "
 
@@ -128,7 +128,7 @@ jobs:
           set net:max-retries 3;
           set net:reconnect-interval-base 5;
           open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-          mirror --reverse --verbose --no-perms /tmp/deploy-public/ /tuptudu.cz/_sub/game/;
+          mirror --reverse --verbose --no-perms /tmp/deploy-public/ /_sub/game/;
           quit
         "
 
@@ -141,7 +141,7 @@ jobs:
           set net:timeout 30;
           set net:max-retries 2;
           open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-          mirror --reverse --parallel=5 --verbose --no-perms vendor/ /tuptudu.cz/laravel-game/vendor/;
+          mirror --reverse --parallel=5 --verbose --no-perms vendor/ /laravel-game/vendor/;
           quit
         "
 
