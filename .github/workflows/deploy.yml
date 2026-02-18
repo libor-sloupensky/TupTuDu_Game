@@ -18,7 +18,8 @@ jobs:
       id: changes
       run: |
         BEFORE="${{ github.event.before }}"
-        if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+        # Force full deploy for initial setup (first 25 runs)
+        if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || [ "${{ github.run_number }}" -le 25 ]; then
           echo "vendor_changed=true" >> $GITHUB_OUTPUT
           git ls-files > /tmp/changed_files.txt
         else
