@@ -21,7 +21,7 @@ jobs:
       id: changes
       run: |
         BEFORE="${{ github.event.before }}"
-        if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || [ "${{ github.run_number }}" -le 20 ]; then
+        if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || [ "${{ github.run_number }}" -le 25 ]; then
           echo "vendor_changed=true" >> $GITHUB_OUTPUT
           echo "full_deploy=true" >> $GITHUB_OUTPUT
           git ls-files > /tmp/changed_files.txt
@@ -36,7 +36,6 @@ jobs:
         fi
         echo "Changed files:"
         cat /tmp/changed_files.txt
-        echo "vendor_changed=$(cat $GITHUB_OUTPUT | grep vendor_changed | cut -d= -f2)"
 
     - name: Setup PHP
       if: steps.changes.outputs.vendor_changed == 'true'
@@ -80,48 +79,6 @@ jobs:
         echo "Generated .env:"
         cat /tmp/deploy.env | grep -v PASSWORD
 
-    - name: Debug - explore FTP structure and write permissions
-      run: |
-        echo "test file" > /tmp/test_write.txt
-        lftp -e "
-          set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 222';
-          set cmd:fail-exit no;
-          set xfer:clobber on;
-          open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-
-          echo '=== PWD ===';
-          pwd;
-
-          echo '=== ROOT LS ===';
-          ls;
-
-          echo '=== LS _sub ===';
-          ls _sub/;
-
-          echo '=== LS _sub/game ===';
-          ls _sub/game/;
-
-          echo '=== LS laravel-game ===';
-          ls laravel-game/;
-
-          echo '=== TEST: write to _sub/game/ ===';
-          put /tmp/test_write.txt -o _sub/game/_test.txt;
-
-          echo '=== TEST: write to laravel-game/ ===';
-          put /tmp/test_write.txt -o laravel-game/_test.txt;
-
-          echo '=== TEST: mkdir in laravel-game/ ===';
-          mkdir laravel-game/testdir;
-
-          echo '=== CLEANUP ===';
-          rm _sub/game/_test.txt;
-          rm laravel-game/_test.txt;
-          rmdir laravel-game/testdir;
-
-          quit
-        " 2>&1
-        echo "Debug done"
-
     - name: Prepare deploy staging
       run: |
         mkdir -p /tmp/deploy-app
@@ -140,12 +97,34 @@ jobs:
         mkdir -p /tmp/deploy-public
         cp -r public/. /tmp/deploy-public/
 
-        echo "App files:"
-        find /tmp/deploy-app -type f | head -30
-        echo "Public files:"
-        find /tmp/deploy-public -type f | head -10
+        echo "App staging:"
+        find /tmp/deploy-app -type f | wc -l
+        echo "Public staging:"
+        find /tmp/deploy-public -type f | wc -l
 
-    - name: Deploy app files via mirror
+    - name: Create server directories
+      run: |
+        lftp -e "
+          set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 222';
+          set cmd:fail-exit no;
+          open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
+          echo '=== Test tuptudu.cz dir ===';
+          ls tuptudu.cz/;
+          echo '=== Creating laravel-game inside tuptudu.cz ===';
+          mkdir -pf tuptudu.cz/laravel-game;
+          echo '=== Test write to tuptudu.cz/laravel-game ===';
+          echo test > /tmp/_sftp_test.txt;
+          put /tmp/_sftp_test.txt -o tuptudu.cz/laravel-game/_test.txt;
+          ls tuptudu.cz/laravel-game/;
+          rm tuptudu.cz/laravel-game/_test.txt;
+          echo '=== Test _sub/game inside tuptudu.cz ===';
+          ls tuptudu.cz/_sub/;
+          ls tuptudu.cz/_sub/game/;
+          quit
+        " 2>&1
+        echo "Directory setup done"
+
+    - name: Deploy app files
       run: |
         lftp -e "
           set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 222';
@@ -154,11 +133,11 @@ jobs:
           set net:max-retries 3;
           set net:reconnect-interval-base 5;
           open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-          mirror --reverse --verbose --no-perms --parallel=5 /tmp/deploy-app/ laravel-game/;
+          mirror --reverse --verbose --no-perms --parallel=5 /tmp/deploy-app/ tuptudu.cz/laravel-game/;
           quit
         "
 
-    - name: Deploy public files via mirror
+    - name: Deploy public files
       run: |
         lftp -e "
           set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 222';
@@ -167,7 +146,7 @@ jobs:
           set net:max-retries 3;
           set net:reconnect-interval-base 5;
           open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-          mirror --reverse --verbose --no-perms /tmp/deploy-public/ _sub/game/;
+          mirror --reverse --verbose --no-perms /tmp/deploy-public/ tuptudu.cz/_sub/game/;
           quit
         "
 
@@ -180,7 +159,7 @@ jobs:
           set net:timeout 30;
           set net:max-retries 2;
           open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-          mirror --reverse --parallel=5 --verbose --no-perms vendor/ laravel-game/vendor/;
+          mirror --reverse --parallel=5 --verbose --no-perms vendor/ tuptudu.cz/laravel-game/vendor/;
           quit
         "
 
