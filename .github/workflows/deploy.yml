@@ -94,7 +94,7 @@ jobs:
 
           TARGET=""
           case "$file" in
-            app/*|bootstrap/*|config/*|database/*|resources/*|routes/*)
+            app/*|bootstrap/*|config/*|database/*|resources/*|routes/*|storage/*)
               TARGET="/tuptudu.cz/laravel-game/$file"
               ;;
             public/*)
