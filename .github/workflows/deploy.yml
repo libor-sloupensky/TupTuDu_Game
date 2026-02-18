@@ -7,19 +7,24 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
+    - name: Install lftp
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
     - name: Determine changes
       id: changes
       run: |
         BEFORE="${{ github.event.before }}"
-        if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+        # Force full deploy if laravel-game dir might not exist yet
+        if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || [ "${{ github.run_number }}" -le 15 ]; then
           echo "vendor_changed=true" >> $GITHUB_OUTPUT
+          echo "full_deploy=true" >> $GITHUB_OUTPUT
           git ls-files > /tmp/changed_files.txt
         else
           git diff --name-only "$BEFORE" HEAD > /tmp/changed_files.txt
@@ -28,9 +33,11 @@ jobs:
           else
             echo "vendor_changed=false" >> $GITHUB_OUTPUT
           fi
+          echo "full_deploy=false" >> $GITHUB_OUTPUT
         fi
         echo "Changed files:"
         cat /tmp/changed_files.txt
+        echo "vendor_changed=$(cat $GITHUB_OUTPUT | grep vendor_changed | cut -d= -f2)"
 
     - name: Setup PHP
       if: steps.changes.outputs.vendor_changed == 'true'
@@ -71,11 +78,24 @@ jobs:
         QUEUE_CONNECTION=sync
         ENVEOF
         sed -i 's/^        //' /tmp/deploy.env
+        echo "Generated .env:"
+        cat /tmp/deploy.env | grep -v PASSWORD
+
+    - name: Debug SFTP - test paths
+      continue-on-error: true
+      run: |
+        lftp -e "
+          set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 222';
+          set cmd:fail-exit no;
+          open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
+          pwd;
+          ls;
+          cd tuptudu.cz && pwd && ls && cd ..;
+          quit
+        " 2>&1 || echo "Debug SFTP failed"
 
     - name: Deploy changed files via lftp
       run: |
-        sudo apt-get install -y lftp
-
         CHANGED_FILES=$(cat /tmp/changed_files.txt)
         LFTP_SCRIPT=""
         DIRS_CREATED=""
@@ -100,7 +120,7 @@ jobs:
 
           if [ -n "$TARGET" ]; then
             DIR=$(dirname "$TARGET")
-            if ! echo "$DIRS_CREATED" | grep -qF "$DIR"; then
+            if [ -z "$DIRS_CREATED" ] || ! echo "$DIRS_CREATED" | grep -qF "$DIR"; then
               LFTP_SCRIPT="${LFTP_SCRIPT}mkdir -pf $DIR;"
               DIRS_CREATED="${DIRS_CREATED}${DIR}\n"
             fi
@@ -108,8 +128,13 @@ jobs:
           fi
         done
 
+        LFTP_SCRIPT="${LFTP_SCRIPT}mkdir -pf /tuptudu.cz/laravel-game;"
         LFTP_SCRIPT="${LFTP_SCRIPT}put /tmp/deploy.env -o /tuptudu.cz/laravel-game/.env;"
         LFTP_SCRIPT="${LFTP_SCRIPT}put public/last_push.txt -o /tuptudu.cz/_sub/game/last_push.txt;"
+
+        echo "LFTP script (first 500 chars):"
+        echo "$LFTP_SCRIPT" | head -c 500
+        echo ""
 
         lftp -e "
           set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 222';
@@ -142,9 +167,7 @@ jobs:
         php -r "
           \$pdo = new PDO('mysql:host=db.dw328.webglobe.com;dbname=tuptudu_game;charset=utf8mb4', 'tuptudu_game', getenv('DB_PASSWORD'));
           \$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-          // Sem přidávej migrace jako idempotentní PHP/SQL
-          echo 'Migrations OK' . PHP_EOL;
+          echo 'DB connection OK' . PHP_EOL;
         "
 
     - name: Verify deployment
