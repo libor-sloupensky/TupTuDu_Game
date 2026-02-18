@@ -81,69 +81,54 @@ jobs:
         echo "Generated .env:"
         cat /tmp/deploy.env | grep -v PASSWORD
 
-    - name: Debug SFTP - test paths
-      continue-on-error: true
+    - name: Prepare deploy staging
       run: |
-        lftp -e "
-          set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 222';
-          set cmd:fail-exit no;
-          open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-          pwd;
-          ls;
-          cd tuptudu.cz && pwd && ls && cd ..;
-          quit
-        " 2>&1 || echo "Debug SFTP failed"
-
-    - name: Deploy changed files via lftp
-      run: |
-        CHANGED_FILES=$(cat /tmp/changed_files.txt)
-        LFTP_SCRIPT=""
-        DIRS_CREATED=""
-
-        for file in $CHANGED_FILES; do
-          if [ ! -f "$file" ]; then
-            continue
-          fi
-
-          TARGET=""
-          case "$file" in
-            app/*|bootstrap/*|config/*|database/*|resources/*|routes/*)
-              TARGET="/tuptudu.cz/laravel-game/$file"
-              ;;
-            public/*)
-              TARGET="/tuptudu.cz/_sub/game/${file#public/}"
-              ;;
-            artisan|composer.json|composer.lock)
-              TARGET="/tuptudu.cz/laravel-game/$file"
-              ;;
-          esac
-
-          if [ -n "$TARGET" ]; then
-            DIR=$(dirname "$TARGET")
-            if [ -z "$DIRS_CREATED" ] || ! echo "$DIRS_CREATED" | grep -qF "$DIR"; then
-              LFTP_SCRIPT="${LFTP_SCRIPT}mkdir -pf $DIR;"
-              DIRS_CREATED="${DIRS_CREATED}${DIR}\n"
-            fi
-            LFTP_SCRIPT="${LFTP_SCRIPT}put $file -o $TARGET;"
+        # Prepare app files staging directory
+        mkdir -p /tmp/deploy-app
+        for dir in app bootstrap config database resources routes; do
+          if [ -d "$dir" ]; then
+            cp -r "$dir" /tmp/deploy-app/
           fi
         done
+        for f in artisan composer.json composer.lock; do
+          if [ -f "$f" ]; then
+            cp "$f" /tmp/deploy-app/
+          fi
+        done
+        cp /tmp/deploy.env /tmp/deploy-app/.env
 
-        LFTP_SCRIPT="${LFTP_SCRIPT}mkdir -pf /tuptudu.cz/laravel-game;"
-        LFTP_SCRIPT="${LFTP_SCRIPT}put /tmp/deploy.env -o /tuptudu.cz/laravel-game/.env;"
-        LFTP_SCRIPT="${LFTP_SCRIPT}put public/last_push.txt -o /tuptudu.cz/_sub/game/last_push.txt;"
+        # Prepare public files staging directory
+        mkdir -p /tmp/deploy-public
+        cp -r public/. /tmp/deploy-public/
 
-        echo "LFTP script (first 500 chars):"
-        echo "$LFTP_SCRIPT" | head -c 500
-        echo ""
+        echo "App files:"
+        find /tmp/deploy-app -type f | head -30
+        echo "Public files:"
+        find /tmp/deploy-public -type f | head -10
 
+    - name: Deploy app files via mirror
+      run: |
         lftp -e "
           set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 222';
           set xfer:clobber on;
           set net:timeout 30;
-          set net:max-retries 2;
+          set net:max-retries 3;
           set net:reconnect-interval-base 5;
           open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
-          ${LFTP_SCRIPT}
+          mirror --reverse --verbose --no-perms --parallel=5 /tmp/deploy-app/ /tuptudu.cz/laravel-game/;
+          quit
+        "
+
+    - name: Deploy public files via mirror
+      run: |
+        lftp -e "
+          set sftp:connect-program 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 222';
+          set xfer:clobber on;
+          set net:timeout 30;
+          set net:max-retries 3;
+          set net:reconnect-interval-base 5;
+          open sftp://libor.tuptudu.cz:${{ secrets.FTP_PASSWORD }}@ftp.tuptudu.cz;
+          mirror --reverse --verbose --no-perms /tmp/deploy-public/ /tuptudu.cz/_sub/game/;
           quit
         "
 
