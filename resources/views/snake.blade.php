@@ -182,7 +182,7 @@
     const COLS = canvas.width / GRID;   // 20
     const ROWS = canvas.height / GRID;  // 20
     const NUM_ITEMS = 18;
-    const BASE_SPEED = 10;
+    const BASE_SPEED = 12;
 
     let multiplier = 0;
     let score = 0;
@@ -327,19 +327,6 @@
             ctx.stroke();
         }
 
-        // Draw flash effects (fading colored cells)
-        const now = Date.now();
-        for (let i = flashes.length - 1; i >= 0; i--) {
-            const f = flashes[i];
-            const elapsed = now - f.startTime;
-            if (elapsed > 3000) { flashes.splice(i, 1); continue; }
-            const alpha = 0.6 * (1 - elapsed / 3000);
-            ctx.fillStyle = f.color === 'green'
-                ? `rgba(74, 222, 128, ${alpha})`
-                : `rgba(248, 113, 113, ${alpha})`;
-            ctx.fillRect(f.x + 1, f.y + 1, GRID - 2, GRID - 2);
-        }
-
         // Draw number items
         items.forEach(item => {
             ctx.fillStyle = '#1e3a5f';
@@ -378,8 +365,8 @@
                             snake.maxCells += 2;
                             score += eaten.value;
                             correctStreak++;
-                            if (correctStreak >= 2) {
-                                speed = Math.max(4, Math.round(speed * 0.8));
+                            if (correctStreak >= 3) {
+                                speed = Math.max(4, Math.round(speed * 0.9));
                             }
                             showFeedback(`+${eaten.value} Správně!`, 'correct');
                         } else {
@@ -412,6 +399,19 @@
                 }
             }
         });
+
+        // Draw flash effects on top of everything (snake + cells)
+        const now = Date.now();
+        for (let i = flashes.length - 1; i >= 0; i--) {
+            const f = flashes[i];
+            const elapsed = now - f.startTime;
+            if (elapsed > 3000) { flashes.splice(i, 1); continue; }
+            const alpha = 0.85 * (1 - elapsed / 3000);
+            ctx.fillStyle = f.color === 'green'
+                ? `rgba(34, 197, 94, ${alpha})`
+                : `rgba(239, 68, 68, ${alpha})`;
+            ctx.fillRect(f.x, f.y, GRID, GRID);
+        }
     }
 
     // Input handling
