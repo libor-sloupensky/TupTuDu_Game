@@ -214,29 +214,55 @@
         return n > 0 && n % multiplier === 0;
     }
 
-    function generateNumber() {
-        // 40% chance of being a correct multiple, 60% wrong
-        if (Math.random() < 0.4) {
-            const factor = Math.floor(Math.random() * 10) + 1;
-            return multiplier * factor;
-        } else {
-            let n;
-            do {
-                n = Math.floor(Math.random() * 100) + 1;
-            } while (n % multiplier === 0);
-            return n;
-        }
+    function generateCorrect() {
+        return multiplier * (Math.floor(Math.random() * 10) + 1);
     }
 
-    function spawnItem() {
+    function generateWrong() {
+        let n;
+        do {
+            n = Math.floor(Math.random() * 100) + 1;
+        } while (n % multiplier === 0);
+        return n;
+    }
+
+    function generateNumber() {
+        return Math.random() < 0.4 ? generateCorrect() : generateWrong();
+    }
+
+    function findFreePos() {
         let x, y, attempts = 0;
         do {
             x = Math.floor(Math.random() * COLS) * GRID;
             y = Math.floor(Math.random() * ROWS) * GRID;
             attempts++;
         } while (attempts < 50 && isOccupied(x, y));
+        return { x, y };
+    }
 
-        return { x, y, value: generateNumber() };
+    function spawnItem() {
+        const pos = findFreePos();
+        return { ...pos, value: generateNumber() };
+    }
+
+    function spawnCorrectItem() {
+        const pos = findFreePos();
+        return { ...pos, value: generateCorrect() };
+    }
+
+    function spawnWrongItem() {
+        const pos = findFreePos();
+        return { ...pos, value: generateWrong() };
+    }
+
+    function removeRandomOfType(isCorrectType) {
+        const candidates = [];
+        for (let j = 0; j < items.length; j++) {
+            if (isMultiple(items[j].value) === isCorrectType) candidates.push(j);
+        }
+        if (candidates.length === 0) return;
+        const idx = candidates[Math.floor(Math.random() * candidates.length)];
+        items.splice(idx, 1);
     }
 
     function isOccupied(x, y) {
@@ -369,6 +395,11 @@
                                 speed = Math.max(4, Math.round(speed * 0.9));
                             }
                             showFeedback(`+${eaten.value} Správně!`, 'correct');
+                            // Remove eaten correct, remove one wrong, add new correct + wrong
+                            items.splice(i, 1);
+                            removeRandomOfType(false);
+                            items.push(spawnCorrectItem());
+                            items.push(spawnWrongItem());
                         } else {
                             // Wrong! Shrink
                             flashes.push({ x: eaten.x, y: eaten.y, color: 'red', startTime: Date.now() });
@@ -377,9 +408,12 @@
                             correctStreak = 0;
                             speed = BASE_SPEED;
                             showFeedback(`Špatně! ${eaten.value} není násobek ${multiplier}`, 'wrong');
+                            // Remove eaten wrong, remove one correct, add new wrong + correct
+                            items.splice(i, 1);
+                            removeRandomOfType(true);
+                            items.push(spawnWrongItem());
+                            items.push(spawnCorrectItem());
                         }
-                        // Replace eaten item
-                        items[i] = spawnItem();
                         updateHUD();
                         gameOverCheck();
                         break;
