@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TupTuDu - Násobkový had</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .game-header h1 {
+            font-size: 28px;
+            margin-bottom: 4px;
+        }
+
+        .game-header .task {
+            font-size: 20px;
+            color: #fbbf24;
+        }
+
+        .info-bar {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .info-bar .score { color: #4ade80; }
+        .info-bar .length { color: #60a5fa; }
+        .info-bar .lives { color: #f87171; }
+
+        canvas {
+            border: 2px solid #334155;
+            border-radius: 8px;
+            background: #0f172a;
+        }
+
+        .feedback {
+            font-size: 22px;
+            font-weight: bold;
+            margin-top: 12px;
+            min-height: 30px;
+            transition: opacity 0.3s;
+        }
+
+        .feedback.correct { color: #4ade80; }
+        .feedback.wrong { color: #f87171; }
+
+        .game-over {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .game-over.hidden { display: none; }
+
+        .game-over h2 {
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        .game-over .final-score {
+            font-size: 24px;
+            color: #fbbf24;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            padding: 14px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            margin: 6px;
+        }
+
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102,126,234,0.4); }
+        .btn-secondary { background: #475569; }
+
+        .controls-hint {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .start-screen.hidden { display: none; }
+
+        .start-screen h2 {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .start-screen p {
+            font-size: 16px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            max-width: 400px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .multiplier-display {
+            font-size: 48px;
+            color: #fbbf24;
+            font-weight: bold;
+            margin: 16px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-header">
+        <h1>Nasobkovy had</h1>
+        <div class="task" id="task"></div>
+    </div>
+
+    <div class="info-bar">
+        <span>Skore: <span class="score" id="score">0</span></span>
+        <span>Delka: <span class="length" id="snakeLength">4</span></span>
+    </div>
+
+    <canvas id="game" width="480" height="480"></canvas>
+
+    <div class="feedback" id="feedback"></div>
+    <div class="controls-hint">Ovladani: sipky nebo WASD</div>
+
+    <div class="start-screen" id="startScreen">
+        <h2>Nasobkovy had</h2>
+        <p>Had lovi nasobky cisla. Sbirej spravne nasobky a vyhybej se ostatnim cislum!</p>
+        <p>Spravny nasobek = had roste a dostanes body.<br>Spatne cislo = had se zkrati.</p>
+        <div class="multiplier-display" id="startMultiplier"></div>
+        <button class="btn" onclick="startGame()">Hrat!</button>
+        <a href="/" class="btn btn-secondary">Zpet na menu</a>
+    </div>
+
+    <div class="game-over hidden" id="gameOver">
+        <h2>Konec hry!</h2>
+        <div class="final-score" id="finalScore"></div>
+        <button class="btn" onclick="restartGame()">Hrat znovu</button>
+        <a href="/" class="btn btn-secondary">Zpet na menu</a>
+    </div>
+
+    <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const GRID = 32;
+    const COLS = canvas.width / GRID;   // 15
+    const ROWS = canvas.height / GRID;  // 15
+    const NUM_ITEMS = 12;
+
+    let multiplier = 0;
+    let score = 0;
+    let gameRunning = false;
+    let feedbackTimer = null;
+    let frameCount = 0;
+    let speed = 6; // frames between moves (lower = faster)
+
+    const snake = {
+        x: 0, y: 0,
+        dx: GRID, dy: 0,
+        cells: [],
+        maxCells: 4
+    };
+
+    // Number items on the board
+    let items = [];
+
+    function pickMultiplier() {
+        multiplier = Math.floor(Math.random() * 9) + 2; // 2-10
+        document.getElementById('task').textContent = `Sbirej nasobky cisla ${multiplier}!`;
+        document.getElementById('startMultiplier').textContent = `× ${multiplier}`;
+    }
+
+    function isMultiple(n) {
+        return n > 0 && n % multiplier === 0;
+    }
+
+    function generateNumber() {
+        // 40% chance of being a correct multiple, 60% wrong
+        if (Math.random() < 0.4) {
+            const factor = Math.floor(Math.random() * 10) + 1;
+            return multiplier * factor;
+        } else {
+            let n;
+            do {
+                n = Math.floor(Math.random() * 100) + 1;
+            } while (n % multiplier === 0);
+            return n;
+        }
+    }
+
+    function spawnItem() {
+        let x, y, attempts = 0;
+        do {
+            x = Math.floor(Math.random() * COLS) * GRID;
+            y = Math.floor(Math.random() * ROWS) * GRID;
+            attempts++;
+        } while (attempts < 50 && isOccupied(x, y));
+
+        return { x, y, value: generateNumber() };
+    }
+
+    function isOccupied(x, y) {
+        for (const cell of snake.cells) {
+            if (cell.x === x && cell.y === y) return true;
+        }
+        for (const item of items) {
+            if (item.x === x && item.y === y) return true;
+        }
+        return false;
+    }
+
+    function spawnItems() {
+        items = [];
+        for (let i = 0; i < NUM_ITEMS; i++) {
+            items.push(spawnItem());
+        }
+    }
+
+    function resetSnake() {
+        snake.x = Math.floor(COLS / 2) * GRID;
+        snake.y = Math.floor(ROWS / 2) * GRID;
+        snake.dx = GRID;
+        snake.dy = 0;
+        snake.cells = [];
+        snake.maxCells = 4;
+    }
+
+    function showFeedback(text, type) {
+        const el = document.getElementById('feedback');
+        el.textContent = text;
+        el.className = 'feedback ' + type;
+        clearTimeout(feedbackTimer);
+        feedbackTimer = setTimeout(() => { el.textContent = ''; }, 1200);
+    }
+
+    function updateHUD() {
+        document.getElementById('score').textContent = score;
+        document.getElementById('snakeLength').textContent = snake.maxCells;
+    }
+
+    function gameOverCheck() {
+        if (snake.maxCells <= 1) {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = `Skore: ${score} | Nasobky cisla ${multiplier}`;
+            document.getElementById('gameOver').classList.remove('hidden');
+        }
+    }
+
+    function loop() {
+        requestAnimationFrame(loop);
+        if (!gameRunning) return;
+
+        if (++frameCount < speed) return;
+        frameCount = 0;
+
+        // Move snake
+        snake.x += snake.dx;
+        snake.y += snake.dy;
+
+        // Wrap around
+        if (snake.x < 0) snake.x = canvas.width - GRID;
+        else if (snake.x >= canvas.width) snake.x = 0;
+        if (snake.y < 0) snake.y = canvas.height - GRID;
+        else if (snake.y >= canvas.height) snake.y = 0;
+
+        snake.cells.unshift({ x: snake.x, y: snake.y });
+        if (snake.cells.length > snake.maxCells) {
+            snake.cells.pop();
+        }
+
+        // Clear
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw grid lines (subtle)
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= COLS; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * GRID, 0);
+            ctx.lineTo(i * GRID, canvas.height);
+            ctx.stroke();
+        }
+        for (let i = 0; i <= ROWS; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, i * GRID);
+            ctx.lineTo(canvas.width, i * GRID);
+            ctx.stroke();
+        }
+
+        // Draw number items
+        items.forEach(item => {
+            const correct = isMultiple(item.value);
+            ctx.fillStyle = correct ? '#065f46' : '#7f1d1d';
+            ctx.fillRect(item.x + 1, item.y + 1, GRID - 2, GRID - 2);
+
+            ctx.fillStyle = correct ? '#34d399' : '#fca5a5';
+            ctx.font = 'bold 14px Segoe UI, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(item.value, item.x + GRID / 2, item.y + GRID / 2);
+        });
+
+        // Draw snake
+        snake.cells.forEach((cell, index) => {
+            const headGlow = index === 0 ? '#22d3ee' : '#06b6d4';
+            const bodyColor = index === 0 ? '#22d3ee' : '#0891b2';
+            ctx.fillStyle = bodyColor;
+            ctx.fillRect(cell.x + 1, cell.y + 1, GRID - 2, GRID - 2);
+
+            if (index === 0) {
+                ctx.shadowColor = '#22d3ee';
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = headGlow;
+                ctx.fillRect(cell.x + 2, cell.y + 2, GRID - 4, GRID - 4);
+                ctx.shadowBlur = 0;
+            }
+
+            // Check collision with items (head only)
+            if (index === 0) {
+                for (let i = items.length - 1; i >= 0; i--) {
+                    if (cell.x === items[i].x && cell.y === items[i].y) {
+                        const eaten = items[i];
+                        if (isMultiple(eaten.value)) {
+                            // Correct! Grow
+                            snake.maxCells += 2;
+                            score += eaten.value;
+                            showFeedback(`+${eaten.value} Spravne!`, 'correct');
+                        } else {
+                            // Wrong! Shrink
+                            snake.maxCells = Math.max(1, snake.maxCells - 2);
+                            score = Math.max(0, score - 10);
+                            showFeedback(`Spatne! ${eaten.value} neni nasobek ${multiplier}`, 'wrong');
+                        }
+                        // Replace eaten item
+                        items[i] = spawnItem();
+                        updateHUD();
+                        gameOverCheck();
+                        break;
+                    }
+                }
+            }
+
+            // Self-collision
+            if (index === 0) {
+                for (let i = 1; i < snake.cells.length; i++) {
+                    if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
+                        gameRunning = false;
+                        document.getElementById('finalScore').textContent = `Skore: ${score} | Nasobky cisla ${multiplier}`;
+                        document.getElementById('gameOver').classList.remove('hidden');
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    // Input handling
+    let nextDx = null, nextDy = null;
+
+    document.addEventListener('keydown', function(e) {
+        // Arrows + WASD
+        if ((e.key === 'ArrowLeft' || e.key === 'a') && snake.dx === 0) {
+            snake.dx = -GRID; snake.dy = 0;
+        } else if ((e.key === 'ArrowUp' || e.key === 'w') && snake.dy === 0) {
+            snake.dy = -GRID; snake.dx = 0;
+        } else if ((e.key === 'ArrowRight' || e.key === 'd') && snake.dx === 0) {
+            snake.dx = GRID; snake.dy = 0;
+        } else if ((e.key === 'ArrowDown' || e.key === 's') && snake.dy === 0) {
+            snake.dy = GRID; snake.dx = 0;
+        }
+    });
+
+    function startGame() {
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('gameOver').classList.add('hidden');
+        score = 0;
+        resetSnake();
+        spawnItems();
+        updateHUD();
+        gameRunning = true;
+    }
+
+    function restartGame() {
+        pickMultiplier();
+        startGame();
+    }
+
+    // Init
+    pickMultiplier();
+    requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

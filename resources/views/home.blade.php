@@ -120,7 +120,7 @@
                 <div class="game-icon">🐍</div>
                 <h2>Násobkový had</h2>
                 <p>Lov násobky malé násobilky a vyhýbej se špatným číslům!</p>
-                <span class="badge badge-soon">Připravujeme</span>
+                <span class="badge badge-ready">Hrát</span>
             </a>
         </div>
 
