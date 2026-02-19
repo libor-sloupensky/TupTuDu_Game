@@ -301,10 +301,15 @@
         return false;
     }
 
+    const CORRECT_COUNT = 7;  // out of NUM_ITEMS=18
+
     function spawnItems() {
         items = [];
-        for (let i = 0; i < NUM_ITEMS; i++) {
-            items.push(spawnItem());
+        for (let i = 0; i < CORRECT_COUNT; i++) {
+            items.push(spawnCorrectItem());
+        }
+        for (let i = 0; i < NUM_ITEMS - CORRECT_COUNT; i++) {
+            items.push(spawnWrongItem());
         }
     }
 
