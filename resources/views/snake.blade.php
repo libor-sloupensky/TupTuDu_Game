@@ -153,7 +153,7 @@
         <span>Délka: <span class="length" id="snakeLength">4</span></span>
     </div>
 
-    <canvas id="game" width="650" height="650"></canvas>
+    <canvas id="game" width="520" height="520"></canvas>
 
     <div class="feedback" id="feedback"></div>
     <div class="controls-hint">Ovládání: šipky nebo WASD</div>
@@ -179,8 +179,8 @@
     const ctx = canvas.getContext('2d');
 
     const GRID = 26;
-    const COLS = canvas.width / GRID;   // 25
-    const ROWS = canvas.height / GRID;  // 25
+    const COLS = canvas.width / GRID;   // 20
+    const ROWS = canvas.height / GRID;  // 20
     const NUM_ITEMS = 18;
     const BASE_SPEED = 10;
 
@@ -201,6 +201,8 @@
 
     // Number items on the board
     let items = [];
+    // Flash effects: { x, y, color, startTime }
+    let flashes = [];
 
     function pickMultiplier() {
         multiplier = Math.floor(Math.random() * 9) + 2; // 2-10
@@ -325,6 +327,19 @@
             ctx.stroke();
         }
 
+        // Draw flash effects (fading colored cells)
+        const now = Date.now();
+        for (let i = flashes.length - 1; i >= 0; i--) {
+            const f = flashes[i];
+            const elapsed = now - f.startTime;
+            if (elapsed > 3000) { flashes.splice(i, 1); continue; }
+            const alpha = 0.6 * (1 - elapsed / 3000);
+            ctx.fillStyle = f.color === 'green'
+                ? `rgba(74, 222, 128, ${alpha})`
+                : `rgba(248, 113, 113, ${alpha})`;
+            ctx.fillRect(f.x + 1, f.y + 1, GRID - 2, GRID - 2);
+        }
+
         // Draw number items
         items.forEach(item => {
             ctx.fillStyle = '#1e3a5f';
@@ -359,6 +374,7 @@
                         const eaten = items[i];
                         if (isMultiple(eaten.value)) {
                             // Correct! Grow
+                            flashes.push({ x: eaten.x, y: eaten.y, color: 'green', startTime: Date.now() });
                             snake.maxCells += 2;
                             score += eaten.value;
                             correctStreak++;
@@ -368,6 +384,7 @@
                             showFeedback(`+${eaten.value} Správně!`, 'correct');
                         } else {
                             // Wrong! Shrink
+                            flashes.push({ x: eaten.x, y: eaten.y, color: 'red', startTime: Date.now() });
                             snake.maxCells = Math.max(1, snake.maxCells - 2);
                             score = Math.max(0, score - 10);
                             correctStreak = 0;
@@ -401,6 +418,9 @@
     let nextDx = null, nextDy = null;
 
     document.addEventListener('keydown', function(e) {
+        if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+        }
         // Arrows + WASD
         if ((e.key === 'ArrowLeft' || e.key === 'a') && snake.dx === 0) {
             snake.dx = -GRID; snake.dy = 0;
