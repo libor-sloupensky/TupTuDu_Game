@@ -428,7 +428,7 @@
                             snake.maxCells = Math.max(1, snake.maxCells - 1);
                             score = Math.max(0, score - 10);
                             correctStreak = 0;
-                            speed = BASE_SPEED;
+                            speed = Math.min(BASE_SPEED, Math.round(speed * 1.2));
                             showFeedback(`Špatně! ${eaten.value} není násobek ${multiplier}`, 'wrong');
                             // Remove eaten wrong, remove one correct, add new wrong + correct
                             items.splice(i, 1);
