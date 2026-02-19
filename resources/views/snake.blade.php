@@ -144,34 +144,34 @@
 </head>
 <body>
     <div class="game-header">
-        <h1>Nasobkovy had</h1>
+        <h1>Násobkový had</h1>
         <div class="task" id="task"></div>
     </div>
 
     <div class="info-bar">
-        <span>Skore: <span class="score" id="score">0</span></span>
-        <span>Delka: <span class="length" id="snakeLength">4</span></span>
+        <span>Skóre: <span class="score" id="score">0</span></span>
+        <span>Délka: <span class="length" id="snakeLength">4</span></span>
     </div>
 
     <canvas id="game" width="480" height="480"></canvas>
 
     <div class="feedback" id="feedback"></div>
-    <div class="controls-hint">Ovladani: sipky nebo WASD</div>
+    <div class="controls-hint">Ovládání: šipky nebo WASD</div>
 
     <div class="start-screen" id="startScreen">
-        <h2>Nasobkovy had</h2>
-        <p>Had lovi nasobky cisla. Sbirej spravne nasobky a vyhybej se ostatnim cislum!</p>
-        <p>Spravny nasobek = had roste a dostanes body.<br>Spatne cislo = had se zkrati.</p>
+        <h2>Násobkový had</h2>
+        <p>Had loví násobky čísla. Sbírej správné násobky a vyhýbej se ostatním číslům!</p>
+        <p>Správný násobek = had roste a dostaneš body.<br>Špatné číslo = had se zkrátí.</p>
         <div class="multiplier-display" id="startMultiplier"></div>
-        <button class="btn" onclick="startGame()">Hrat!</button>
-        <a href="/" class="btn btn-secondary">Zpet na menu</a>
+        <button class="btn" onclick="startGame()">Hrát!</button>
+        <a href="/" class="btn btn-secondary">Zpět na menu</a>
     </div>
 
     <div class="game-over hidden" id="gameOver">
         <h2>Konec hry!</h2>
         <div class="final-score" id="finalScore"></div>
-        <button class="btn" onclick="restartGame()">Hrat znovu</button>
-        <a href="/" class="btn btn-secondary">Zpet na menu</a>
+        <button class="btn" onclick="restartGame()">Hrát znovu</button>
+        <a href="/" class="btn btn-secondary">Zpět na menu</a>
     </div>
 
     <script>
@@ -202,7 +202,7 @@
 
     function pickMultiplier() {
         multiplier = Math.floor(Math.random() * 9) + 2; // 2-10
-        document.getElementById('task').textContent = `Sbirej nasobky cisla ${multiplier}!`;
+        document.getElementById('task').textContent = `Sbírej násobky čísla ${multiplier}!`;
         document.getElementById('startMultiplier').textContent = `× ${multiplier}`;
     }
 
@@ -277,7 +277,7 @@
     function gameOverCheck() {
         if (snake.maxCells <= 1) {
             gameRunning = false;
-            document.getElementById('finalScore').textContent = `Skore: ${score} | Nasobky cisla ${multiplier}`;
+            document.getElementById('finalScore').textContent = `Skóre: ${score} | Násobky čísla ${multiplier}`;
             document.getElementById('gameOver').classList.remove('hidden');
         }
     }
@@ -360,12 +360,12 @@
                             // Correct! Grow
                             snake.maxCells += 2;
                             score += eaten.value;
-                            showFeedback(`+${eaten.value} Spravne!`, 'correct');
+                            showFeedback(`+${eaten.value} Správně!`, 'correct');
                         } else {
                             // Wrong! Shrink
                             snake.maxCells = Math.max(1, snake.maxCells - 2);
                             score = Math.max(0, score - 10);
-                            showFeedback(`Spatne! ${eaten.value} neni nasobek ${multiplier}`, 'wrong');
+                            showFeedback(`Špatně! ${eaten.value} není násobek ${multiplier}`, 'wrong');
                         }
                         // Replace eaten item
                         items[i] = spawnItem();
@@ -381,7 +381,7 @@
                 for (let i = 1; i < snake.cells.length; i++) {
                     if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
                         gameRunning = false;
-                        document.getElementById('finalScore').textContent = `Skore: ${score} | Nasobky cisla ${multiplier}`;
+                        document.getElementById('finalScore').textContent = `Skóre: ${score} | Násobky čísla ${multiplier}`;
                         document.getElementById('gameOver').classList.remove('hidden');
                         break;
                     }
