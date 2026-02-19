@@ -184,6 +184,8 @@
     const NUM_ITEMS = 18;
     const BASE_SPEED = 15;
     const MIN_SPEED = 4;
+    const HINT_DELAY = 8000;   // ms before glow starts
+    const HINT_RAMP = 7000;    // ms from first glow to full glow
 
     let multiplier = 0;
     let score = 0;
@@ -251,17 +253,17 @@
 
     function spawnItem() {
         const pos = findFreePos();
-        return { ...pos, value: generateNumber() };
+        return { ...pos, value: generateNumber(), spawnTime: Date.now() };
     }
 
     function spawnCorrectItem() {
         const pos = findFreePos();
-        return { ...pos, value: generateCorrect() };
+        return { ...pos, value: generateCorrect(), spawnTime: Date.now() };
     }
 
     function spawnWrongItem() {
         const pos = findFreePos();
-        return { ...pos, value: generateWrong() };
+        return { ...pos, value: generateWrong(), spawnTime: Date.now() };
     }
 
     function removeRandomOfType(isCorrectType) {
@@ -378,11 +380,34 @@
         }
 
         // Draw number items
+        const drawTime = Date.now();
         items.forEach(item => {
-            ctx.fillStyle = '#1e3a5f';
+            // Hint glow for correct items that haven't been collected for a while
+            let hintAlpha = 0;
+            if (isMultiple(item.value)) {
+                const age = drawTime - item.spawnTime;
+                if (age > HINT_DELAY) {
+                    hintAlpha = Math.min(1, (age - HINT_DELAY) / HINT_RAMP);
+                }
+            }
+
+            if (hintAlpha > 0) {
+                // Golden glow behind the cell
+                ctx.shadowColor = `rgba(251, 191, 36, ${hintAlpha * 0.8})`;
+                ctx.shadowBlur = 6 + hintAlpha * 10;
+                ctx.fillStyle = `rgba(251, 191, 36, ${hintAlpha * 0.3})`;
+                ctx.fillRect(item.x, item.y, GRID, GRID);
+                ctx.shadowBlur = 0;
+            }
+
+            ctx.fillStyle = hintAlpha > 0
+                ? `rgb(${30 + Math.round(80 * hintAlpha)}, ${58 + Math.round(60 * hintAlpha)}, ${95 - Math.round(30 * hintAlpha)})`
+                : '#1e3a5f';
             ctx.fillRect(item.x + 1, item.y + 1, GRID - 2, GRID - 2);
 
-            ctx.fillStyle = '#e2e8f0';
+            ctx.fillStyle = hintAlpha > 0
+                ? `rgb(${226 + Math.round(29 * hintAlpha)}, ${232 - Math.round(40 * hintAlpha)}, ${240 - Math.round(80 * hintAlpha)})`
+                : '#e2e8f0';
             ctx.font = 'bold 14px Segoe UI, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
