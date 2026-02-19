@@ -184,8 +184,8 @@
     const NUM_ITEMS = 18;
     const BASE_SPEED = 15;
     const MIN_SPEED = 4;
-    const HINT_DELAY = 8000;   // ms before glow starts
-    const HINT_RAMP = 7000;    // ms from first glow to full glow
+    const HINT_DELAY = 16000;  // ms before glow starts
+    const HINT_RAMP = 14000;   // ms from first glow to full glow
 
     let multiplier = 0;
     let score = 0;
@@ -392,21 +392,21 @@
             }
 
             if (hintAlpha > 0) {
-                // Golden glow behind the cell
-                ctx.shadowColor = `rgba(251, 191, 36, ${hintAlpha * 0.8})`;
-                ctx.shadowBlur = 6 + hintAlpha * 10;
-                ctx.fillStyle = `rgba(251, 191, 36, ${hintAlpha * 0.3})`;
+                // Golden glow behind the cell (half intensity)
+                ctx.shadowColor = `rgba(251, 191, 36, ${hintAlpha * 0.4})`;
+                ctx.shadowBlur = 3 + hintAlpha * 5;
+                ctx.fillStyle = `rgba(251, 191, 36, ${hintAlpha * 0.15})`;
                 ctx.fillRect(item.x, item.y, GRID, GRID);
                 ctx.shadowBlur = 0;
             }
 
             ctx.fillStyle = hintAlpha > 0
-                ? `rgb(${30 + Math.round(80 * hintAlpha)}, ${58 + Math.round(60 * hintAlpha)}, ${95 - Math.round(30 * hintAlpha)})`
+                ? `rgb(${30 + Math.round(40 * hintAlpha)}, ${58 + Math.round(30 * hintAlpha)}, ${95 - Math.round(15 * hintAlpha)})`
                 : '#1e3a5f';
             ctx.fillRect(item.x + 1, item.y + 1, GRID - 2, GRID - 2);
 
             ctx.fillStyle = hintAlpha > 0
-                ? `rgb(${226 + Math.round(29 * hintAlpha)}, ${232 - Math.round(40 * hintAlpha)}, ${240 - Math.round(80 * hintAlpha)})`
+                ? `rgb(${226 + Math.round(15 * hintAlpha)}, ${232 - Math.round(20 * hintAlpha)}, ${240 - Math.round(40 * hintAlpha)})`
                 : '#e2e8f0';
             ctx.font = 'bold 14px Segoe UI, sans-serif';
             ctx.textAlign = 'center';
