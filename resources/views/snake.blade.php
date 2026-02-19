@@ -183,13 +183,15 @@
     const ROWS = canvas.height / GRID;  // 20
     const NUM_ITEMS = 18;
     const BASE_SPEED = 15;
+    const MIN_SPEED = 4;
 
     let multiplier = 0;
     let score = 0;
     let gameRunning = false;
     let feedbackTimer = null;
     let frameCount = 0;
-    let speed = BASE_SPEED; // frames between moves (lower = faster)
+    let speedLevel = 0;  // each level = 1 frame faster
+    let speed = BASE_SPEED;
     let correctStreak = 0;
 
     const snake = {
@@ -414,7 +416,9 @@
                             score += eaten.value;
                             correctStreak++;
                             if (correctStreak >= 3) {
-                                speed = Math.max(4, Math.round(speed * 0.9));
+                                speedLevel++;
+                                correctStreak = 0;
+                                speed = Math.max(MIN_SPEED, BASE_SPEED - speedLevel);
                             }
                             showFeedback(`+${eaten.value} Správně!`, 'correct');
                             // Remove eaten correct, remove one wrong, add new correct + wrong
@@ -428,7 +432,8 @@
                             snake.maxCells = Math.max(1, snake.maxCells - 1);
                             score = Math.max(0, score - 10);
                             correctStreak = 0;
-                            speed = Math.min(BASE_SPEED, Math.round(speed * 1.2));
+                            speedLevel = Math.max(0, speedLevel - 1);
+                            speed = Math.max(MIN_SPEED, BASE_SPEED - speedLevel);
                             showFeedback(`Špatně! ${eaten.value} není násobek ${multiplier}`, 'wrong');
                             // Remove eaten wrong, remove one correct, add new wrong + correct
                             items.splice(i, 1);
@@ -494,6 +499,7 @@
         document.getElementById('gameOver').classList.add('hidden');
         score = 0;
         correctStreak = 0;
+        speedLevel = 0;
         speed = BASE_SPEED;
         resetSnake();
         spawnItems();
