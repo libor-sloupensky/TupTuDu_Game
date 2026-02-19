@@ -403,7 +403,7 @@
                         if (isMultiple(eaten.value)) {
                             // Correct! Grow
                             flashes.push({ x: eaten.x, y: eaten.y, color: 'green', startTime: Date.now() });
-                            snake.maxCells += 2;
+                            snake.maxCells += 1;
                             score += eaten.value;
                             correctStreak++;
                             if (correctStreak >= 3) {
@@ -418,7 +418,7 @@
                         } else {
                             // Wrong! Shrink
                             flashes.push({ x: eaten.x, y: eaten.y, color: 'red', startTime: Date.now() });
-                            snake.maxCells = Math.max(1, snake.maxCells - 2);
+                            snake.maxCells = Math.max(1, snake.maxCells - 1);
                             score = Math.max(0, score - 10);
                             correctStreak = 0;
                             speed = BASE_SPEED;
