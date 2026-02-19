@@ -153,7 +153,7 @@
         <span>Délka: <span class="length" id="snakeLength">4</span></span>
     </div>
 
-    <canvas id="game" width="640" height="640"></canvas>
+    <canvas id="game" width="650" height="650"></canvas>
 
     <div class="feedback" id="feedback"></div>
     <div class="controls-hint">Ovládání: šipky nebo WASD</div>
@@ -178,17 +178,19 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
-    const GRID = 32;
-    const COLS = canvas.width / GRID;   // 20
-    const ROWS = canvas.height / GRID;  // 20
+    const GRID = 26;
+    const COLS = canvas.width / GRID;   // 25
+    const ROWS = canvas.height / GRID;  // 25
     const NUM_ITEMS = 18;
+    const BASE_SPEED = 10;
 
     let multiplier = 0;
     let score = 0;
     let gameRunning = false;
     let feedbackTimer = null;
     let frameCount = 0;
-    let speed = 8; // frames between moves (lower = faster)
+    let speed = BASE_SPEED; // frames between moves (lower = faster)
+    let correctStreak = 0;
 
     const snake = {
         x: 0, y: 0,
@@ -359,11 +361,17 @@
                             // Correct! Grow
                             snake.maxCells += 2;
                             score += eaten.value;
+                            correctStreak++;
+                            if (correctStreak >= 2) {
+                                speed = Math.max(4, Math.round(speed * 0.8));
+                            }
                             showFeedback(`+${eaten.value} Správně!`, 'correct');
                         } else {
                             // Wrong! Shrink
                             snake.maxCells = Math.max(1, snake.maxCells - 2);
                             score = Math.max(0, score - 10);
+                            correctStreak = 0;
+                            speed = BASE_SPEED;
                             showFeedback(`Špatně! ${eaten.value} není násobek ${multiplier}`, 'wrong');
                         }
                         // Replace eaten item
@@ -409,6 +417,8 @@
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('gameOver').classList.add('hidden');
         score = 0;
+        correctStreak = 0;
+        speed = BASE_SPEED;
         resetSnake();
         spawnItems();
         updateHUD();
