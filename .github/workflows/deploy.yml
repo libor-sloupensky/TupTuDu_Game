@@ -125,6 +125,7 @@ jobs:
 
         LFTP_SCRIPT="${LFTP_SCRIPT}put /tmp/deploy.env -o /tuptudu.cz/laravel-game/.env;"
         LFTP_SCRIPT="${LFTP_SCRIPT}put public/last_push.txt -o /tuptudu.cz/_sub/game/last_push.txt;"
+        LFTP_SCRIPT="${LFTP_SCRIPT}put config/version.php -o /tuptudu.cz/laravel-game/config/version.php;"
 
         echo ""
         echo "Connecting to SFTP..."
