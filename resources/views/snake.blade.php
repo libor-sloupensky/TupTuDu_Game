@@ -182,7 +182,7 @@
     const COLS = canvas.width / GRID;   // 20
     const ROWS = canvas.height / GRID;  // 20
     const NUM_ITEMS = 18;
-    const BASE_SPEED = 12;
+    const BASE_SPEED = 15;
 
     let multiplier = 0;
     let score = 0;
@@ -236,7 +236,7 @@
             x = Math.floor(Math.random() * COLS) * GRID;
             y = Math.floor(Math.random() * ROWS) * GRID;
             attempts++;
-        } while (attempts < 50 && isOccupied(x, y));
+        } while (attempts < 100 && (isOccupied(x, y) || isInDangerZone(x, y)));
         return { x, y };
     }
 
@@ -263,6 +263,21 @@
         if (candidates.length === 0) return;
         const idx = candidates[Math.floor(Math.random() * candidates.length)];
         items.splice(idx, 1);
+    }
+
+    function isInDangerZone(x, y) {
+        if (!gameRunning) return false;
+        const relX = (x - snake.x) / GRID;
+        const relY = (y - snake.y) / GRID;
+        let ahead, side;
+        if (snake.dx > 0)      { ahead = relX;  side = Math.abs(relY); }
+        else if (snake.dx < 0) { ahead = -relX; side = Math.abs(relY); }
+        else if (snake.dy > 0) { ahead = relY;  side = Math.abs(relX); }
+        else if (snake.dy < 0) { ahead = -relY; side = Math.abs(relX); }
+        else return false;
+        if (ahead >= 0 && ahead <= 6 && side <= 4) return true;
+        if (ahead < 0 && ahead >= -3 && side <= 4) return true;
+        return false;
     }
 
     function isOccupied(x, y) {
