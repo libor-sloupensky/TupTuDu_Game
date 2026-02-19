@@ -230,13 +230,20 @@
         return Math.random() < 0.4 ? generateCorrect() : generateWrong();
     }
 
+    function tooCloseToItem(x, y) {
+        for (const item of items) {
+            if (Math.abs(item.x - x) <= GRID && Math.abs(item.y - y) <= GRID) return true;
+        }
+        return false;
+    }
+
     function findFreePos() {
         let x, y, attempts = 0;
         do {
             x = Math.floor(Math.random() * COLS) * GRID;
             y = Math.floor(Math.random() * ROWS) * GRID;
             attempts++;
-        } while (attempts < 100 && (isOccupied(x, y) || isInDangerZone(x, y)));
+        } while (attempts < 100 && (isOccupied(x, y) || isInDangerZone(x, y) || tooCloseToItem(x, y)));
         return { x, y };
     }
 
