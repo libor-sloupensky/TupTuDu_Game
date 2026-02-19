@@ -153,7 +153,7 @@
         <span>Délka: <span class="length" id="snakeLength">4</span></span>
     </div>
 
-    <canvas id="game" width="480" height="480"></canvas>
+    <canvas id="game" width="640" height="640"></canvas>
 
     <div class="feedback" id="feedback"></div>
     <div class="controls-hint">Ovládání: šipky nebo WASD</div>
@@ -179,16 +179,16 @@
     const ctx = canvas.getContext('2d');
 
     const GRID = 32;
-    const COLS = canvas.width / GRID;   // 15
-    const ROWS = canvas.height / GRID;  // 15
-    const NUM_ITEMS = 12;
+    const COLS = canvas.width / GRID;   // 20
+    const ROWS = canvas.height / GRID;  // 20
+    const NUM_ITEMS = 18;
 
     let multiplier = 0;
     let score = 0;
     let gameRunning = false;
     let feedbackTimer = null;
     let frameCount = 0;
-    let speed = 6; // frames between moves (lower = faster)
+    let speed = 8; // frames between moves (lower = faster)
 
     const snake = {
         x: 0, y: 0,
@@ -325,11 +325,10 @@
 
         // Draw number items
         items.forEach(item => {
-            const correct = isMultiple(item.value);
-            ctx.fillStyle = correct ? '#065f46' : '#7f1d1d';
+            ctx.fillStyle = '#1e3a5f';
             ctx.fillRect(item.x + 1, item.y + 1, GRID - 2, GRID - 2);
 
-            ctx.fillStyle = correct ? '#34d399' : '#fca5a5';
+            ctx.fillStyle = '#e2e8f0';
             ctx.font = 'bold 14px Segoe UI, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
