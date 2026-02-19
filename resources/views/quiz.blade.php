@@ -230,5 +230,8 @@
 
         loadQuestion();
     </script>
+    <div style="position:fixed;bottom:8px;right:12px;font-size:11px;color:rgba(255,255,255,0.3);text-align:right;">
+        {{ config('version.number') }}<br>{{ config('version.deployed_at') }}
+    </div>
 </body>
 </html>

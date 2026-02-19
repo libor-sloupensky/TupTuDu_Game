@@ -126,6 +126,7 @@
 
         <footer>
             TupTuDu &copy; 2026
+            <br>{{ config('version.number') }}<br>{{ config('version.deployed_at') }}
         </footer>
     </div>
 </body>

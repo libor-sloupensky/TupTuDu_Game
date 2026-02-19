@@ -46,8 +46,11 @@ jobs:
       if: steps.changes.outputs.vendor_changed == 'true'
       run: composer install --no-dev --optimize-autoloader --no-interaction
 
-    - name: Generate last push timestamp
-      run: echo "$(TZ='Europe/Prague' date '+%d.%m.%Y %H:%M:%S')" > ./public/last_push.txt
+    - name: Stamp version with deploy timestamp
+      run: |
+        TIMESTAMP=$(TZ='Europe/Prague' date '+%d.%m.%Y %H:%M:%S')
+        echo "$TIMESTAMP" > ./public/last_push.txt
+        sed -i "s/__DEPLOY_TIMESTAMP__/$TIMESTAMP/" config/version.php
 
     - name: Prepare .env for upload
       run: |
