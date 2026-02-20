@@ -184,7 +184,7 @@
     const NUM_ITEMS = 18;
     const BASE_SPEED = 20;
     const MIN_SPEED = 4;
-    const HINT_DELAY = 32000;  // ms before glow starts
+    const HINT_DELAY = 64000;  // ms before glow starts
     const HINT_RAMP = 14000;   // ms from first glow to full glow
 
     let multiplier = 0;
