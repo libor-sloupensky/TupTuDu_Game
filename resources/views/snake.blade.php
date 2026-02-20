@@ -182,9 +182,9 @@
     const COLS = canvas.width / GRID;   // 20
     const ROWS = canvas.height / GRID;  // 20
     const NUM_ITEMS = 18;
-    const BASE_SPEED = 15;
+    const BASE_SPEED = 20;
     const MIN_SPEED = 4;
-    const HINT_DELAY = 16000;  // ms before glow starts
+    const HINT_DELAY = 32000;  // ms before glow starts
     const HINT_RAMP = 14000;   // ms from first glow to full glow
 
     let multiplier = 0;
