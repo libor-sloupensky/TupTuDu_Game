@@ -491,17 +491,7 @@
                 }
             }
 
-            // Self-collision
-            if (index === 0) {
-                for (let i = 1; i < snake.cells.length; i++) {
-                    if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
-                        gameRunning = false;
-                        document.getElementById('finalScore').textContent = `Skóre: ${score} | Násobky čísla ${multiplier}`;
-                        document.getElementById('gameOver').classList.remove('hidden');
-                        break;
-                    }
-                }
-            }
+            // Self-collision disabled: snake can pass through itself
         });
 
         // Draw flash effects on top of everything (snake + cells)
