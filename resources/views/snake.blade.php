@@ -329,7 +329,7 @@
         snake.y = Math.floor(ROWS / 2) * GRID;
         snake.dx = 0;
         snake.dy = 0;
-        snake.cells = [];
+        snake.cells = [{ x: snake.x, y: snake.y }];
         snake.maxCells = 4;
     }
 
@@ -361,19 +361,21 @@
         if (++frameCount < speed) return;
         frameCount = 0;
 
-        // Move snake
-        snake.x += snake.dx;
-        snake.y += snake.dy;
+        // Move snake only when it has a direction
+        if (snake.dx !== 0 || snake.dy !== 0) {
+            snake.x += snake.dx;
+            snake.y += snake.dy;
 
-        // Wrap around
-        if (snake.x < 0) snake.x = canvas.width - GRID;
-        else if (snake.x >= canvas.width) snake.x = 0;
-        if (snake.y < 0) snake.y = canvas.height - GRID;
-        else if (snake.y >= canvas.height) snake.y = 0;
+            // Wrap around
+            if (snake.x < 0) snake.x = canvas.width - GRID;
+            else if (snake.x >= canvas.width) snake.x = 0;
+            if (snake.y < 0) snake.y = canvas.height - GRID;
+            else if (snake.y >= canvas.height) snake.y = 0;
 
-        snake.cells.unshift({ x: snake.x, y: snake.y });
-        while (snake.cells.length > snake.maxCells) {
-            snake.cells.pop();
+            snake.cells.unshift({ x: snake.x, y: snake.y });
+            while (snake.cells.length > snake.maxCells) {
+                snake.cells.pop();
+            }
         }
 
         // Clear
