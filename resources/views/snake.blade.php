@@ -219,7 +219,8 @@
     }
 
     function generateCorrect() {
-        return multiplier * (Math.floor(Math.random() * 10) + 1);
+        // skip ×1 (too trivial), range ×2..×10
+        return multiplier * (Math.floor(Math.random() * 9) + 2);
     }
 
     function generateWrong() {
@@ -256,14 +257,24 @@
         return { ...pos, value: generateNumber(), spawnTime: Date.now() };
     }
 
+    function uniqueValue(generator) {
+        const usedValues = new Set(items.map(it => it.value));
+        let value, attempts = 0;
+        do {
+            value = generator();
+            attempts++;
+        } while (attempts < 30 && usedValues.has(value));
+        return value;
+    }
+
     function spawnCorrectItem() {
         const pos = findFreePos();
-        return { ...pos, value: generateCorrect(), spawnTime: Date.now() };
+        return { ...pos, value: uniqueValue(generateCorrect), spawnTime: Date.now() };
     }
 
     function spawnWrongItem() {
         const pos = findFreePos();
-        return { ...pos, value: generateWrong(), spawnTime: Date.now() };
+        return { ...pos, value: uniqueValue(generateWrong), spawnTime: Date.now() };
     }
 
     function removeRandomOfType(isCorrectType) {
@@ -316,7 +327,7 @@
     function resetSnake() {
         snake.x = Math.floor(COLS / 2) * GRID;
         snake.y = Math.floor(ROWS / 2) * GRID;
-        snake.dx = GRID;
+        snake.dx = 0;
         snake.dy = 0;
         snake.cells = [];
         snake.maxCells = 4;
@@ -361,7 +372,7 @@
         else if (snake.y >= canvas.height) snake.y = 0;
 
         snake.cells.unshift({ x: snake.x, y: snake.y });
-        if (snake.cells.length > snake.maxCells) {
+        while (snake.cells.length > snake.maxCells) {
             snake.cells.pop();
         }
 
@@ -397,21 +408,21 @@
             }
 
             if (hintAlpha > 0) {
-                // Golden glow behind the cell (half intensity)
-                ctx.shadowColor = `rgba(251, 191, 36, ${hintAlpha * 0.4})`;
-                ctx.shadowBlur = 3 + hintAlpha * 5;
-                ctx.fillStyle = `rgba(251, 191, 36, ${hintAlpha * 0.15})`;
+                // Very subtle golden glow behind the cell
+                ctx.shadowColor = `rgba(251, 191, 36, ${hintAlpha * 0.2})`;
+                ctx.shadowBlur = 2 + hintAlpha * 3;
+                ctx.fillStyle = `rgba(251, 191, 36, ${hintAlpha * 0.07})`;
                 ctx.fillRect(item.x, item.y, GRID, GRID);
                 ctx.shadowBlur = 0;
             }
 
             ctx.fillStyle = hintAlpha > 0
-                ? `rgb(${30 + Math.round(40 * hintAlpha)}, ${58 + Math.round(30 * hintAlpha)}, ${95 - Math.round(15 * hintAlpha)})`
+                ? `rgb(${30 + Math.round(18 * hintAlpha)}, ${58 + Math.round(14 * hintAlpha)}, ${95 - Math.round(7 * hintAlpha)})`
                 : '#1e3a5f';
             ctx.fillRect(item.x + 1, item.y + 1, GRID - 2, GRID - 2);
 
             ctx.fillStyle = hintAlpha > 0
-                ? `rgb(${226 + Math.round(15 * hintAlpha)}, ${232 - Math.round(20 * hintAlpha)}, ${240 - Math.round(40 * hintAlpha)})`
+                ? `rgb(${226 + Math.round(8 * hintAlpha)}, ${232 - Math.round(10 * hintAlpha)}, ${240 - Math.round(18 * hintAlpha)})`
                 : '#e2e8f0';
             ctx.font = 'bold 14px Segoe UI, sans-serif';
             ctx.textAlign = 'center';
@@ -512,14 +523,15 @@
         if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
             e.preventDefault();
         }
-        // Arrows + WASD
-        if ((e.key === 'ArrowLeft' || e.key === 'a') && snake.dx === 0) {
+        // Arrows + WASD (standing still = any direction allowed)
+        const stopped = snake.dx === 0 && snake.dy === 0;
+        if ((e.key === 'ArrowLeft' || e.key === 'a') && (stopped || snake.dx === 0)) {
             snake.dx = -GRID; snake.dy = 0;
-        } else if ((e.key === 'ArrowUp' || e.key === 'w') && snake.dy === 0) {
+        } else if ((e.key === 'ArrowUp' || e.key === 'w') && (stopped || snake.dy === 0)) {
             snake.dy = -GRID; snake.dx = 0;
-        } else if ((e.key === 'ArrowRight' || e.key === 'd') && snake.dx === 0) {
+        } else if ((e.key === 'ArrowRight' || e.key === 'd') && (stopped || snake.dx === 0)) {
             snake.dx = GRID; snake.dy = 0;
-        } else if ((e.key === 'ArrowDown' || e.key === 's') && snake.dy === 0) {
+        } else if ((e.key === 'ArrowDown' || e.key === 's') && (stopped || snake.dy === 0)) {
             snake.dy = GRID; snake.dx = 0;
         }
     });
